@@ -3,7 +3,6 @@
 Plugin for open-ephys [plugin-GUI](https://github.com/open-ephys/plugin-GUI/) to control and read data from an interia measurement unit (IMU) via an Arduino, Teensy, or another compatible microcontroller. Communication is done via i2c. Currently the following IMUs are supported:
 
 * **LSM9DS0** the sketch can be found in "LSM0DS0" folder. Requires the Adafruit LSM9DS0 and Unified Sensor libraries. Both can be installed via the Arduino/Teensyduino IDE (Sketch -> Include Library -> Manage Libraries). For details see [here](https://learn.adafruit.com/adafruit-lsm9ds0-accelerometer-gyro-magnetometer-9-dof-breakouts/overview).
-
 * **MPU9250** see "MPU9250" folder. No external libraries required. The current version is optimized for a Teensy but can easily be update to work with an Arduino (see comments in sketch). Hardware setup:  
 	| Sensor | Arduino/Teensy pin  
 	-------------------------------  
