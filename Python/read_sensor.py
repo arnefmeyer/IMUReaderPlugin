@@ -63,12 +63,16 @@ class DataThread(threading.Thread):
                         values = np.asarray([float(u)
                                              for u in line.split(" ")])
 
-                        if len(values) == 10:
+                        if len(values) == 11:
+                            # values contains:
+                            # status, ts, ax, ay, az, gx, gy, gz, mx, my, mz
+                            # however, we will throw away the status value
                             with lock:
-                                self.data.append(values)
+                                self.data.append(values[1:])
                                 self.counter += 1
 
                         if self.counter % 200 == 0:
+                            # this should show the framerate every 1-2 seconds
                             now = time.time()
                             print("fps:", 200. / (now - t0))
                             t0 = now
