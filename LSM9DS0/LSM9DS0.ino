@@ -15,15 +15,12 @@ Adafruit_LSM9DS0 lsm = Adafruit_LSM9DS0();
 int triggerPin = 13;
 
 // processing status
-enum status_t {WAITING=0, RUNNING=1, RECORDING=2};
+enum status_t {WAITING=1, RUNNING=2, RECORDING=3};
 int status;
-
-// read magnetometer data? set to false if not needed 
-// to speed up things
-bool readMagnetometer = true;
+unsigned long counter;
 
 // precision used for converting float to string values
-int precision = 6;
+int precision = 12;
 
 
 void setupSensor()
@@ -62,62 +59,53 @@ void setup()
   
   setupSensor();
   status = 0;
+  counter = 0;
 }
 
 
 void loop()
 {
-  if (status > 0)
+
+  if (Serial.available())
+  {
+    int val = (int)Serial.parseInt();
+    if (val > 0)
+    {
+      status = val;
+    }
+  }
+
+  if (status > WAITING)
   {
     lsm.readAccel();
     lsm.readGyro();
-	if (readMagnetometer)
-	{
-  		lsm.readMag();
-	}
+  	lsm.readMag();
 
     if (status > 1)
     {
       digitalWrite(triggerPin, HIGH);
+      counter++;
     }
 
-    if (readMagnetometer)
-    {
-      Serial.println(String(status) + " " 
-                     + String(millis()) + " " 
-                     + String(lsm.accelData.x, precision) + " " 
-                     + String(lsm.accelData.y, precision) + " " 
-                     + String(lsm.accelData.z, precision) + " " 
-                     + String(lsm.gyroData.x, precision) + " " 
-                     + String(lsm.gyroData.y, precision) + " " 
-                     + String(lsm.gyroData.z, precision) + " "
-                     + String(lsm.magData.x, precision) + " "
-                     + String(lsm.magData.y, precision) + " "
-                     + String(lsm.magData.z, precision));
-    }
-    else
-    {
-      // fill magnetometer values with zeros
-      Serial.println(String(status) + " " 
-                   + String(millis()) + " " 
-                   + String(lsm.accelData.x, precision) + " " 
-                   + String(lsm.accelData.y, precision) + " " 
-                   + String(lsm.accelData.z, precision) + " " 
-                   + String(lsm.gyroData.x, precision) + " " 
-                   + String(lsm.gyroData.y, precision) + " " 
-                   + String(lsm.gyroData.z, precision) + " "
-                   + String(0., precision) + " "
-                   + String(0., precision) + " "
-                   + String(0., precision));
-    }
+    Serial.println(String(status) + "," 
+                   + String(counter) + ","
+                   + String(millis()) + "," 
+                   + String(lsm.accelData.x, precision) + "," 
+                   + String(lsm.accelData.y, precision) + "," 
+                   + String(lsm.accelData.z, precision) + "," 
+                   + String(lsm.gyroData.x, precision) + "," 
+                   + String(lsm.gyroData.y, precision) + "," 
+                   + String(lsm.gyroData.z, precision) + ","
+                   + String(lsm.magData.x, precision) + ","
+                   + String(lsm.magData.y, precision) + ","
+                   + String(lsm.magData.z, precision));
+
+    delay(1);
 
     if (status > 1)
     {
-      delay(1);
       digitalWrite(triggerPin, LOW);
     }
-
-    delay(1);
   }
   else
   {
@@ -125,12 +113,4 @@ void loop()
     delay(10);
   }
 }
-
-
-void serialEvent() {
-  while (Serial.available()) {
-    status = (int)Serial.parseInt();
-  }
-}
-
 

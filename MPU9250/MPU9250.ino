@@ -199,13 +199,12 @@ float aRes, gRes, mRes;      // scale resolutions per LSB for the sensors
 int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
 int16_t gyroCount[3];   // Stores the 16-bit signed gyro sensor output
 int16_t magCount[3];    // Stores the 16-bit signed magnetometer sensor output
-float magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
+float magCalibration[3] = {1, 1, 1}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
 float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0};      // Bias corrections for gyro and accelerometer
 float SelfTest[6];    // holds results of gyro and accelerometer self test
 
-float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
-float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};    // vector to hold quaternion
-float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for Mahony method
+//float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
+float values[9];
 
 // precision used for converting float to string values
 int precision = 12;
@@ -213,6 +212,8 @@ int precision = 12;
 // processing status
 enum status_t {WAITING=1, RUNNING=2, RECORDING=3};
 int status;
+unsigned long ts;  // time stamp returned by millis
+unsigned long counter;
 
 // CMOS/TTL trigger pin
 int triggerPin = 13;
@@ -256,11 +257,13 @@ void setup()
   {
     while(1) ; // Loop forever if communication doesn't happen
   }
+
+  counter = 0;
 }
 
 void loop()
 {
-  while (Serial.available())
+  if (Serial.available())
   {
     int val = (int)Serial.parseInt();
     if (val > 0)
@@ -269,47 +272,54 @@ void loop()
     }
   }
 
+  ts = millis();
+
   if (status > WAITING && (readByte(MPU9250_ADDRESS, INT_STATUS) & 0x01))
   {
     if (status == RECORDING)
     {
       digitalWrite(triggerPin, HIGH);
+      counter++;
     }
 
     // accelerometer data (convert to g)
     readAccelData(accelCount);
-    ax = (float)accelCount[0]*aRes; // - accelBias[0];
-    ay = (float)accelCount[1]*aRes; // - accelBias[1];   
-    az = (float)accelCount[2]*aRes; // - accelBias[2];  
+    values[0] = (float)accelCount[0]*aRes; // - accelBias[0];
+    values[1] = (float)accelCount[1]*aRes; // - accelBias[1];   
+    values[2] = (float)accelCount[2]*aRes; // - accelBias[2];  
 
     // gyroscope data (convert to dps)
     readGyroData(gyroCount);
-    gx = (float)gyroCount[0]*gRes;
-    gy = (float)gyroCount[1]*gRes;  
-    gz = (float)gyroCount[2]*gRes;
+    values[3] = (float)gyroCount[0]*gRes;
+    values[4] = (float)gyroCount[1]*gRes;  
+    values[5] = (float)gyroCount[2]*gRes;
 
     // magnetometer data (convert to milliGauss)
     readMagData(magCount);
-    mx = (float)magCount[0]*mRes*magCalibration[0] - 20;  // - magbias[0];
-    my = (float)magCount[1]*mRes*magCalibration[1] - 510;  // - magbias[1];  
-    mz = (float)magCount[2]*mRes*magCalibration[2] - 0;  // - magbias[2];
- 
+    values[6] = (float)magCount[0]*mRes*magCalibration[0] - 20;  // - magbias[0];
+    values[7] = (float)magCount[1]*mRes*magCalibration[1] - 510;  // - magbias[1];  
+    values[8] = (float)magCount[2]*mRes*magCalibration[2] - 0;  // - magbias[2];
+
     Serial.println(
-      String(status) + " "
-      + String(millis()) + " "
-      + String(ax, precision) + " "
-      + String(ay, precision) + " "
-      + String(az, precision) + " "
-      + String(gx, precision) + " "
-      + String(gy, precision) + " "
-      + String(gz, precision) + " "
-      + String(mx, precision) + " "
-      + String(my, precision) + " "
-      + String(mz, precision));
+      ">"
+      + String(status) + ","
+      + String(counter) + ","
+      + String(ts) + ","
+      + String(values[0], precision) + ","
+      + String(values[1], precision) + ","
+      + String(values[2], precision) + ","
+      + String(values[3], precision) + ","
+      + String(values[4], precision) + ","
+      + String(values[5], precision) + ","
+      + String(values[6], precision) + ","
+      + String(values[7], precision) + ","
+      + String(values[8], precision)
+      + "<");
+
+    delay(1);
 
     if (status == RECORDING)
     {
-      delay(1);
       digitalWrite(triggerPin, LOW);
     }
   }

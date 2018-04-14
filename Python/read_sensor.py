@@ -59,16 +59,21 @@ class DataThread(threading.Thread):
                 try:
                     line = ser.readline().strip()
                     if len(line) > 0:
-
+                        # each line starts with a ">" and ends with a "<"
+                        # as openframeworks serial used in the open-ephys
+                        # GUI does not have a proper readline function.
+                        # we don't need it here so we can ignore them.
+                        line = line[1:-1]
                         values = np.asarray([float(u)
-                                             for u in line.split(" ")])
+                                             for u in line.split(",")])
 
-                        if len(values) == 11:
+                        if len(values) == 12:
                             # values contains:
-                            # status, ts, ax, ay, az, gx, gy, gz, mx, my, mz
-                            # however, we will throw away the status value
+                            # status, index, ts, ax, ay, az, gx, gy, gz, mx, my, mz
+                            # however, we will throw away the index and status
+                            # values
                             with lock:
-                                self.data.append(values[1:])
+                                self.data.append(values[2:])
                                 self.counter += 1
 
                         if self.counter % 200 == 0:

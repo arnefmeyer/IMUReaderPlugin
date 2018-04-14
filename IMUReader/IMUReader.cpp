@@ -39,8 +39,9 @@ class IMUReaderEditor;
 class IMUFrame
 {
 public:
-	IMUFrame(juce::int64 ts, int experiment_, int recording_, float ax_, float ay_, float az_, float gx_, float gy_, float gz_, float mx_, float my_, float mz_)
+	IMUFrame(juce::int64 idx, juce::int64 ts, int experiment_, int recording_, float ax_, float ay_, float az_, float gx_, float gy_, float gz_, float mx_, float my_, float mz_)
 	{
+		index = idx;
 		timestamp = ts;
 		experiment = experiment_;
 		recording = recording_;
@@ -57,7 +58,7 @@ public:
 
 	String asCsv(bool newline)
 	{
-		String line = String::formatted("%lld,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f", timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz);
+		String line = String::formatted("%lld,%lld,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f", index, timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz);
 
 		if (newline)
 			 line += String("\n");
@@ -66,6 +67,7 @@ public:
 	}
 
 private:
+	juce::int64 index;
 	juce::int64 timestamp;
 	int experiment;
 	int recording;
@@ -113,7 +115,7 @@ public:
 		if (!timestampFile.exists())
 		{
 			timestampFile.create();
-			timestampFile.appendText("# timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz\n");
+			timestampFile.appendText("# index, timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz\n");
 		}
 	}
 
@@ -365,6 +367,9 @@ void IMUReader::run()
 	unsigned char buf[1024];
 	int n;
 	int status;
+	bool add = false;
+
+	std::stringstream ss;
 
     while (true)
     {
@@ -375,28 +380,53 @@ void IMUReader::run()
 
 			if ((n != OF_SERIAL_ERROR) && (n > 0))
 			{
-				StringArray tokens;
-				tokens.addTokens((const char*)&buf[0], " ", "");
-				status = tokens[0].getIntValue();
-
-				if (status == RECORDING and isRecording and diskThread->isThreadRunning())
+				for (int i=0; i<1024; i++)
 				{
-					IMUFrame* frame = new IMUFrame(tokens[1].getLargeIntValue(),
-										    	   CoreServices::RecordNode::getExperimentNumber(),
-												   CoreServices::RecordNode::getRecordingNumber(),
-												   tokens[2].getFloatValue(),
-												   tokens[3].getFloatValue(),
-												   tokens[4].getFloatValue(),
-												   tokens[5].getFloatValue(),
-												   tokens[6].getFloatValue(),
-												   tokens[7].getFloatValue(),
-												   tokens[8].getFloatValue(),
-												   tokens[9].getFloatValue(),
-												   tokens[10].getFloatValue());
-					diskThread->addFrame(frame);
-				}
+					if (int(buf[i]) != 32) // skip spaces
+					{
+						if (int(buf[i]) == 62) // ">"
+						{
+							// beginning of imu frame data
+							add = true;
+						}
+						else if (int(buf[i]) == 60) // "<"
+						{	
+							// ending of imu frame -> create frame object
+							StringArray tokens;
+							tokens.addTokens(ss.str().c_str(), ",", "");
+							status = tokens[0].getIntValue();
 
-				frameCounter += 1;
+							if (status == RECORDING and isRecording and diskThread->isThreadRunning())
+							{
+								IMUFrame* frame = new IMUFrame(tokens[1].getLargeIntValue(),
+														       tokens[2].getLargeIntValue(),
+															   CoreServices::RecordNode::getExperimentNumber(),
+															   CoreServices::RecordNode::getRecordingNumber(),
+															   tokens[3].getFloatValue(),
+															   tokens[4].getFloatValue(),
+															   tokens[5].getFloatValue(),
+															   tokens[6].getFloatValue(),
+															   tokens[7].getFloatValue(),
+															   tokens[8].getFloatValue(),
+															   tokens[9].getFloatValue(),
+															   tokens[10].getFloatValue(),
+															   tokens[11].getFloatValue());
+								diskThread->addFrame(frame);
+							}
+
+							frameCounter += 1;
+
+							ss.str("");
+							ss.clear();
+							add = false;
+						}
+						else if (add)
+						{
+							ss << buf[i];
+						}
+
+					}
+				}
 			}
 		}
 
