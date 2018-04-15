@@ -60,7 +60,7 @@ public:
 
 	String asCsv(bool newline)
 	{
-		String line = String::formatted("%lld,%lld,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f", index, timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz);
+		String line = String::formatted("%lld,%lld,%d,%d,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f", index, timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz);
 
 		if (newline)
 			 line += String("\n");
