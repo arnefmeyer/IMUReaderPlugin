@@ -30,6 +30,8 @@
 #include <termios.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <thread>
+#include <chrono>
 
 #include "IMUReader.h"
 
@@ -123,26 +125,34 @@ public:
 	{
 		IMUFrame *frame;
 
+		//std::stringstream ss;
+		std::chrono::milliseconds sleep_time(10);
+		StringArray arr = StringArray();
+
 		while (!threadShouldExit())
 		{
-			frame = NULL;
-
 			lock.enter();
-			if (frameBuffer.size() > 0)
+			while (frameBuffer.size() > 0)
 			{
 				frame = frameBuffer.removeAndReturn(0);
+				//ss << frame->asCsv(true).toStdString();
+				arr.add(frame->asCsv(true));
+				delete frame;
 			}
 			lock.exit();
 
-			if (frame != NULL)
+			if (arr.size() > 0)
 			{
 				if (timestampFile != File::nonexistent)
 				{
-					timestampFile.appendText(frame->asCsv(true));
+					String s = arr.joinIntoString("");
+					timestampFile.appendText(s);
+					arr.clear();
 				}
-
-				delete frame;
 			}
+
+			// don't burn cpu cycles ...
+			std::this_thread::sleep_for(sleep_time);
 		}
 	}
 
@@ -370,20 +380,26 @@ void IMUReader::run()
 	bool add = false;
 
 	std::stringstream ss;
+	std::chrono::milliseconds sleep_time(5);
 
     while (true)
     {
 		if (deviceConnected)
 		{
-			memset(buf, ' ', 1024);
-			n = serial.readBytes(&buf[0], 1024);
-
-			if ((n != OF_SERIAL_ERROR) && (n > 0))
+			if (serial.available())
 			{
-				for (int i=0; i<1024; i++)
+				memset(buf, ' ', 1024);
+				n = serial.readBytes(&buf[0], 1024);
+
+				if ((n != OF_SERIAL_ERROR) && (n > 0))
 				{
-					if (int(buf[i]) != 32) // skip spaces
+					for (int i=0; i<1024; i++)
 					{
+						if (int(buf[i]) == 32) // skip spaces -> break
+						{
+							break;
+						}
+
 						if (int(buf[i]) == 62) // ">"
 						{
 							// beginning of imu frame data
@@ -399,7 +415,7 @@ void IMUReader::run()
 							if (status == RECORDING and isRecording and diskThread->isThreadRunning())
 							{
 								IMUFrame* frame = new IMUFrame(tokens[1].getLargeIntValue(),
-														       tokens[2].getLargeIntValue(),
+															   tokens[2].getLargeIntValue(),
 															   CoreServices::RecordNode::getExperimentNumber(),
 															   CoreServices::RecordNode::getRecordingNumber(),
 															   tokens[3].getFloatValue(),
@@ -424,9 +440,13 @@ void IMUReader::run()
 						{
 							ss << buf[i];
 						}
-
-					}
-				}
+					}  // loop over buffer
+				}  // error
+			}  // serial.available
+			else
+			{
+				// don't burn cpu cycles ...
+				std::this_thread::sleep_for(sleep_time);
 			}
 		}
 
