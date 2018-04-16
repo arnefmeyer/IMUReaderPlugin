@@ -60,7 +60,8 @@ public:
 
 	String asCsv(bool newline)
 	{
-		String line = String::formatted("%lld,%lld,%d,%d,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f,%.12f", index, timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz);
+		// Note: increase/decrease resolution here; this will increase/decrease file size
+		String line = String::formatted("%lld,%lld,%d,%d,%.16f,%.16f,%.16f,%.16f,%.16f,%.16f,%.16f,%.16f,%.16f", index, timestamp, experiment, recording, ax, ay, az, gx, gy, gz, mx, my, mz);
 
 		if (newline)
 			 line += String("\n");

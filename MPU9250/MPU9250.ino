@@ -206,8 +206,8 @@ float SelfTest[6];    // holds results of gyro and accelerometer self test
 //float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
 float values[9];
 
-// precision used for converting float to string values
-int precision = 12;
+// precision (digits) for converting float to string values
+int precision = 16;
 
 // processing status
 enum status_t {WAITING=1, RUNNING=2, RECORDING=3};
@@ -224,6 +224,7 @@ void setup()
   delay(250);
 
   pinMode(triggerPin, OUTPUT);
+  digitalWrite(triggerPin, LOW);
 
   Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_100);
 
@@ -263,7 +264,7 @@ void setup()
 
 void loop()
 {
-  if (Serial.available())
+  while (Serial.available())
   {
     int val = (int)Serial.parseInt();
     if (val > 0)
@@ -325,17 +326,9 @@ void loop()
   }
   else
   {
-    digitalWrite(triggerPin, LOW);
     delay(10);
   }
 }
-
-
-//void serialEvent() {
-//  while (Serial.available()) {
-//    status = (int)Serial.parseInt();
-//  }
-//}
 
 
 //===================================================================================================================

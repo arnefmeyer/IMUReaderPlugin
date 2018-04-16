@@ -35,7 +35,7 @@ The plugin creates a "IMU_data.csv" file in the recording directory. A typical f
 
 Columns:
 
-* index: index of the recorded IMU frame  
+* index: index of the recorded IMU frame; each index corresponds to one sync pulse  
 * timestamps: Arduino/Teensy timestamp (as returned by millis())  
 * experiment: open-ephys experiment number  
 * recording: open-ephys recording number 
@@ -43,9 +43,17 @@ Columns:
 * gx -- gz: gyroscope signals  
 * mx -- mz: magnetometer signals
 
+**Note:** the values are transmitted using Serial.println as writing bytes (via serialization Serial.write) was much slower (180 fps compared to < 100 fps). However, this requires setting a reasonable precision for converting float values to strings (default: 16 digits). It is possible to increase/decrease the resolution by changing the number of digits to be transmitted (variable _precision_ in MPU9250/LSM9DS0 sketches) or written (_IMUReader.cpp_ around line 64).
+
+**Note 2:** there might be 1-2 more sync pulses (TTL in open-ephys GUI) than IMU samples (or vice versa). This is expeceted and a result of how the plugin communicates with the IMU. Simply ignore the last few pulses/samples.
+
 Reading in Python:  
 `import numpy as np`  
 `data = np.loadtxt('IMU_data.csv', delimiter=',')`
+
+
+## Latency
+The Teensy/Arduino is sending sync pulses (3.3V or 5V) to allow synchronization of IMU with neural data. However, there is a small time lag between the sync pulses and the actual IMU data. To get the time lag for a specific IMU mechanically connect the IMU board to an Intan headstage with accelerometer (RHD2132 or RHD2164) and compute the cross-correlation of the IMU and Intan headstage accelerometer signals. For a MPU9250 sensor latencies were typcically around 5-7 ms: ![latency test](Data/intan_imu_latency_test.png).
 
 
 ## Remarks
