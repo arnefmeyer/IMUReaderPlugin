@@ -20,7 +20,7 @@ int status;
 unsigned long counter;
 
 // precision used for converting float to string values
-int precision = 12;
+int precision = 16;
 
 
 void setupSensor()
